@@ -19,6 +19,7 @@ if(CONFIG_SOC_ADC_SUPPORTED)
 
     if(CONFIG_SOC_ADC_DMA_SUPPORTED)
         list(APPEND srcs "adc_continuous.c")
+        list(APPEND srcs "adc_cont_bare.c")
         if(CONFIG_SOC_ADC_MONITOR_SUPPORTED)
             list(APPEND srcs "adc_monitor.c")
         endif()
