@@ -1,6 +1,7 @@
 
 
 #include "esp_adc/adc_cali.h"
+#include "esp_attr.h"
 #include "esp_err.h"
 #include "esp_private/adc_dma.h"
 #include "esp_private/adc_share_hw_ctrl.h"
@@ -24,6 +25,8 @@
 
 static const char *ADC_TAG = "adc_cont_bare";
 
+DMA_ATTR static volatile dma_descriptor_t adc_descriptors[ADC_INTERNAL_BUF_NUM] = {0};
+
 esp_err_t adc_cont_bare_init(uint8_t *dma_buf, adc_cont_bare_ll_t **ret_data)
 {
 #if CONFIG_ADC_ENABLE_DEBUG_LOG
@@ -31,7 +34,6 @@ esp_err_t adc_cont_bare_init(uint8_t *dma_buf, adc_cont_bare_ll_t **ret_data)
 #endif
     esp_err_t ret = ESP_OK;
     ESP_RETURN_ON_FALSE((ADC_CONVERSION_FRAME_SIZE % SOC_ADC_DIGI_DATA_BYTES_PER_CONV == 0), ESP_ERR_INVALID_ARG, ADC_TAG, "conv_frame_size should be in multiples of `SOC_ADC_DIGI_DATA_BYTES_PER_CONV`");
-
 
     adc_cont_bare_ll_t *data = heap_caps_calloc(1, sizeof(adc_cont_bare_ll_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     if (data == NULL) {
@@ -48,10 +50,8 @@ esp_err_t adc_cont_bare_init(uint8_t *dma_buf, adc_cont_bare_ll_t **ret_data)
     //assign static buffer used by DMA
     adc_ctx->rx_dma_buf = dma_buf;
 
-    //malloc dma descriptor
-    uint32_t dma_desc_num_per_frame = (ADC_CONVERSION_FRAME_SIZE + DMA_DESCRIPTOR_BUFFER_MAX_SIZE_4B_ALIGNED - 1) / DMA_DESCRIPTOR_BUFFER_MAX_SIZE_4B_ALIGNED;
-    uint32_t dma_desc_max_num = dma_desc_num_per_frame * INTERNAL_BUF_NUM;
-    adc_ctx->hal.rx_desc = heap_caps_aligned_calloc(ADC_DMA_DESC_ALIGN, dma_desc_max_num, sizeof(dma_descriptor_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA | MALLOC_CAP_8BIT);
+    //assign static dma descriptor
+    adc_ctx->hal.rx_desc = (dma_descriptor_t *)adc_descriptors;
 
     if (!adc_ctx->hal.rx_desc) {
         ret = ESP_ERR_NO_MEM;
@@ -78,8 +78,8 @@ esp_err_t adc_cont_bare_init(uint8_t *dma_buf, adc_cont_bare_ll_t **ret_data)
     }
 
     adc_hal_dma_config_t config = {
-        .eof_desc_num = INTERNAL_BUF_NUM,
-        .eof_step = dma_desc_num_per_frame,
+        .eof_desc_num = ADC_INTERNAL_BUF_NUM,
+        .eof_step = 1,
         .eof_num = ADC_CONVERSION_FRAME_SIZE / SOC_ADC_DIGI_DATA_BYTES_PER_CONV
     };
     adc_hal_dma_ctx_config(&adc_ctx->hal, &config);
@@ -161,7 +161,7 @@ esp_err_t adc_cont_bare_config(adc_cont_bare_handle_t handle)
     esp_clk_tree_src_get_freq_hz(ADC_DIGI_CLK_SRC_DEFAULT, ESP_CLK_TREE_SRC_FREQ_PRECISION_CACHED, &clk_src_freq_hz);
 
     handle->hal_digi_ctrlr_cfg.adc_pattern_len = 1;
-    handle->hal_digi_ctrlr_cfg.sample_freq_hz = 2000000;
+    handle->hal_digi_ctrlr_cfg.sample_freq_hz = ADC_SAMPLE_RATE;
     handle->hal_digi_ctrlr_cfg.conv_mode = ADC_CONV_SINGLE_UNIT_1;
 
     adc_digi_pattern_config_t adc_pattern;
