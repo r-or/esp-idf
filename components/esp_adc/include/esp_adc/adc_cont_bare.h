@@ -15,7 +15,7 @@ extern "C" {
 #define ADC_BIT_WIDTH   SOC_ADC_DIGI_MAX_BITWIDTH
 
 #define ADC_CONVERSION_FRAME_SIZE 4092  // max size of a descriptor: 1023 samples
-#define ADC_INTERNAL_BUF_NUM      10     // amount of descriptors
+#define ADC_INTERNAL_BUF_NUM      16     // amount of descriptors
 
 #define ADC_SAMPLE_RATE 833000 //800000 //2000000
 
