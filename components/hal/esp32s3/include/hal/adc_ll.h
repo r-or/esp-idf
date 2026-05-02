@@ -24,6 +24,8 @@
 #include "hal/regi2c_ctrl.h"
 #include "soc/regi2c_saradc.h"
 
+#include "esp_log.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -366,9 +368,26 @@ static inline void adc_ll_digi_trigger_disable(void)
  */
 static inline void adc_ll_digi_controller_clk_div(uint32_t div_num, uint32_t div_b, uint32_t div_a)
 {
-    HAL_FORCE_MODIFY_U32_REG_FIELD(APB_SARADC.apb_adc_clkm_conf, clkm_div_num, div_num);
+    HAL_FORCE_MODIFY_U32_REG_FIELD(APB_SARADC.apb_adc_clkm_conf, clkm_div_num, 15)//div_num);
     APB_SARADC.apb_adc_clkm_conf.clkm_div_b = div_b;
     APB_SARADC.apb_adc_clkm_conf.clkm_div_a = div_a;
+/*        union {
+        struct {
+            uint32_t clkm_div_num                  :    8; // *Integral I2S clock divider value
+            uint32_t clkm_div_b                    :    6;//  /Fractional clock divider numerator value
+            uint32_t clkm_div_a                    :    6; // /Fractional clock divider denominator value
+            uint32_t clk_en                        :    1;
+            uint32_t clk_sel                       :    2;  // /Set this bit to enable clk_apll
+            uint32_t reserved23                    :    9;
+        };
+        uint32_t val;
+    } apb_adc_clkm_conf;
+*/
+    ESP_LOGD(
+        "ADC LL", "APB_SARADC:\n clkm_div_num=%d\n clkm_div_b=%d\n clkm_div_a=%d\n clk_en=%d\n clk_sel=%d",
+        APB_SARADC.apb_adc_clkm_conf.clkm_div_num, APB_SARADC.apb_adc_clkm_conf.clkm_div_b, APB_SARADC.apb_adc_clkm_conf.clkm_div_a,
+        APB_SARADC.apb_adc_clkm_conf.clk_en, APB_SARADC.apb_adc_clkm_conf.clk_sel
+    );
 }
 
 /**

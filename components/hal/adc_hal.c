@@ -10,6 +10,7 @@
 #include "hal/assert.h"
 #include "soc/lldesc.h"
 #include "soc/soc_caps.h"
+#include "esp_log.h"
 
 #if CONFIG_IDF_TARGET_ESP32
 //ADC utilises I2S0 DMA on ESP32
@@ -125,6 +126,7 @@ static void adc_hal_digi_sample_freq_config(adc_hal_dma_ctx_t *hal, adc_continuo
     //Here we set the clock divider factor to make the digital clock to 5M Hz
     adc_ll_digi_controller_clk_div(ADC_LL_CLKM_DIV_NUM_DEFAULT, ADC_LL_CLKM_DIV_B_DEFAULT, ADC_LL_CLKM_DIV_A_DEFAULT);
     adc_ll_digi_clk_sel(clk_src);
+    ESP_LOGD("ADC HAL", "adc sample interval: %d", interval);
 #else
     i2s_ll_rx_clk_set_src(adc_hal_i2s_dev, I2S_CLK_SRC_DEFAULT);    /*!< Clock from PLL_D2_CLK(160M)*/
     uint32_t bclk_div = 16;

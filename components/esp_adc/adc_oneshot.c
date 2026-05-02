@@ -210,6 +210,52 @@ esp_err_t adc_oneshot_config_channel(adc_oneshot_unit_handle_t handle, adc_chann
     return ESP_OK;
 }
 
+esp_err_t adc_oneshot_read_prepare(adc_oneshot_unit_handle_t handle, adc_channel_t chan) {
+    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "invalid argument: null pointer");
+    ESP_RETURN_ON_FALSE(chan < SOC_ADC_CHANNEL_NUM(handle->unit_id), ESP_ERR_INVALID_ARG, TAG, "invalid channel");
+
+    if (adc_lock_try_acquire(handle->unit_id) != ESP_OK) {
+        return ESP_ERR_TIMEOUT;
+    }
+    //portENTER_CRITICAL(&rtc_spinlock);
+
+#if SOC_ADC_DIG_CTRL_SUPPORTED && !SOC_ADC_RTC_CTRL_SUPPORTED
+    ESP_ERROR_CHECK(esp_clk_tree_enable_src((soc_module_clk_t)(handle->hal.clk_src), true));
+#endif
+    ANALOG_CLOCK_ENABLE();
+    adc_oneshot_hal_setup(&(handle->hal), chan);
+#if SOC_ADC_CALIBRATION_V1_SUPPORTED
+    adc_atten_t atten = adc_ll_get_atten(handle->unit_id, chan);
+    adc_hal_calibration_init(handle->unit_id);
+    adc_set_hw_calibration_code(handle->unit_id, atten);
+#endif  // SOC_ADC_CALIBRATION_V1_SUPPORTED
+        //
+        //
+        //
+#if SOC_ADC_DIG_CTRL_SUPPORTED && !SOC_ADC_RTC_CTRL_SUPPORTED
+    /**
+     * There is a hardware limitation. If the APB clock frequency is high, the step of this reg signal: ``onetime_start`` may not be captured by the
+     * ADC digital controller (when its clock frequency is too slow). A rough estimate for this step should be at least 3 ADC digital controller
+     * clock cycle.
+     */
+    uint32_t adc_ctrl_clk = handle->hal.clk_src_freq_hz / (ADC_LL_CLKM_DIV_NUM_DEFAULT + ADC_LL_CLKM_DIV_A_DEFAULT / ADC_LL_CLKM_DIV_B_DEFAULT + 1);
+    //Convert frequency to time (us). Since decimals are removed by this division operation. Add 1 here in case of the fact that delay is not enough.
+    uint32_t sample_delay_us = ((1000 * 1000) / adc_ctrl_clk + 1) * 3;
+   // HAL_EARLY_LOGD("adc_hal", "clk_src_freq_hz: %"PRIu32", adc_ctrl_clk: %"PRIu32", sample_delay_us: %"PRIu32"", clk_src_freq_hz, adc_ctrl_clk, sample_delay_us);
+
+    //This coefficient (8) is got from test, and verified from DT. When digi_clk is not smaller than ``APB_CLK_FREQ/8``, no delay is needed.
+    if (adc_ctrl_clk >= APB_CLK_FREQ/8) {
+        sample_delay_us = 0;
+    }
+
+    ESP_LOGD("adc_hal", "delay for `onetime_start` signal captured: %"PRIu32"", sample_delay_us);
+    adc_oneshot_ll_start(false);
+    esp_rom_delay_us(sample_delay_us);
+    //adc_oneshot_ll_start(true);
+#endif
+    return ESP_OK;
+}
+
 esp_err_t adc_oneshot_read(adc_oneshot_unit_handle_t handle, adc_channel_t chan, int *out_raw)
 {
     ESP_RETURN_ON_FALSE(handle && out_raw, ESP_ERR_INVALID_ARG, TAG, "invalid argument: null pointer");

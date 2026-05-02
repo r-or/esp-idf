@@ -71,6 +71,7 @@ esp_err_t adc_oneshot_new_unit(const adc_oneshot_unit_init_cfg_t *init_config, a
  */
 esp_err_t adc_oneshot_config_channel(adc_oneshot_unit_handle_t handle, adc_channel_t channel, const adc_oneshot_chan_cfg_t *config);
 
+
 /**
  * @brief Get one ADC conversion raw result
  *
@@ -86,6 +87,7 @@ esp_err_t adc_oneshot_config_channel(adc_oneshot_unit_handle_t handle, adc_chann
  *        - ESP_ERR_INVALID_ARG:   Invalid arguments
  *        - ESP_ERR_TIMEOUT:       Timeout, the ADC result is invalid
  */
+esp_err_t adc_oneshot_read_prepare(adc_oneshot_unit_handle_t handle, adc_channel_t chan);
 esp_err_t adc_oneshot_read(adc_oneshot_unit_handle_t handle, adc_channel_t chan, int *out_raw);
 
 /**

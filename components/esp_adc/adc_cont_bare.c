@@ -170,7 +170,7 @@ esp_err_t adc_cont_bare_config(adc_cont_bare_handle_t handle)
 #if CONFIG_IDF_TARGET_ESP32
     adc_pattern.channel = ADC_CHANNEL_7 & 0x7;
 #else
-    adc_pattern.channel = ADC_CHANNEL_3 & 0x7;
+    adc_pattern.channel = ADC_CHANNEL_3;
 #endif
 
     adc_pattern.unit = ADC_UNIT_1;
@@ -183,6 +183,8 @@ esp_err_t adc_cont_bare_config(adc_cont_bare_handle_t handle)
     memcpy(handle->hal_digi_ctrlr_cfg.adc_pattern, &adc_pattern, sizeof(adc_digi_pattern_config_t));
     handle->hal_digi_ctrlr_cfg.clk_src = ADC_DIGI_CLK_SRC_DEFAULT;
     handle->hal_digi_ctrlr_cfg.clk_src_freq_hz = clk_src_freq_hz;
+
+    ESP_LOGI(ADC_TAG, "clk_src_freq_hz is: %d", clk_src_freq_hz);
 
     const int atten_uninitialized = 999;
     handle->adc_atten = atten_uninitialized;
@@ -236,7 +238,6 @@ esp_err_t adc_cont_bare_start(adc_cont_bare_handle_t handle) {
     adc_dma_start(handle->adc_dma, handle->hal.rx_desc);
     adc_hal_digi_connect(true);
     adc_hal_digi_enable(true);
-
     return ESP_OK;
 }
 
